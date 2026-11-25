@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KUTTY — Personal AI Assistant</title>
+  <style>
+    :root {
+      --bg: #030b14;
+      --panel: rgba(6, 20, 36, 0.85);
+      --border: #0d3b5c;
+      --cyan: #18a8ff;
+      --cyan-dim: #4c86a8;
+      --gold: #f5a623;
+      --text: #dceeff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Consolas', 'Segoe UI', monospace; }
+    body {
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(rgba(24, 168, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(24, 168, 255, 0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 12px;
+      gap: 12px;
+    }
+
+    /* Top Header */
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border); padding: 4px 8px 12px;
+    }
+    .brand-wrap { display: flex; align-items: center; gap: 12px; }
+    .logo-box {
+      width: 34px; height: 34px; border: 1px solid var(--cyan);
+      display: grid; place-items: center; color: var(--cyan); font-weight: bold; font-size: 16px;
+    }
+    .brand-title { font-size: 18px; letter-spacing: 5px; font-weight: bold; color: #fff; }
+    .brand-sub { font-size: 11px; color: var(--cyan-dim); margin-top: 2px; }
+
+    .status-wrap { display: flex; align-items: center; gap: 20px; text-align: right; }
+    .clock { font-size: 18px; font-weight: bold; color: #fff; }
+    .date-str { font-size: 11px; color: var(--cyan-dim); }
+    .online-pill { display: flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: 1px; color: #fff; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+    .icon-btn {
+      width: 34px; height: 34px; background: transparent; border: 1px solid var(--border);
+      color: var(--cyan); cursor: pointer; font-size: 16px;
+    }
+    .icon-btn:hover { border-color: var(--cyan); }
+
+    /* Main Grid */
+    .grid { display: grid; grid-template-columns: 270px 1fr; gap: 14px; flex: 1; min-height: 0; }
+
+    /* Left Sidebar Cards */
+    .sidebar { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); padding: 14px;
+      position: relative;
+      clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    }
+    .card-title { font-size: 13px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .card-sub { font-size: 11px; color: var(--cyan-dim); margin: 2px 0 12px; }
+    .temp { font-size: 32px; font-weight: bold; color: #fff; }
+    .temp span { font-size: 16px; color: var(--cyan); }
+    .w-desc { font-size: 12px; color: var(--text); margin: 4px 0 12px; }
+
+    .bar-row { margin-bottom: 10px; font-size: 12px; }
+    .bar-head { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .bar-track { height: 5px; background: #0a2236; width: 100%; }
+    .bar-fill { height: 100%; background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+
+    .list-item { margin-bottom: 12px; font-size: 12px; }
+    .list-top { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .list-date { color: var(--cyan-dim); font-size: 11px; }
+    .list-line { height: 3px; background: #145a86; width: 100%; }
+
+    /* Right Workspace */
+    .workspace { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+
+    /* Orb Panel */
+    .orb-panel {
+      flex: 1; background: var(--panel); border: 1px solid var(--border);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: relative; min-height: 280px;
+    }
+    .scan-line {
+      position: absolute; width: 92%; height: 1px;
+      background: rgba(245, 166, 35, 0.35); pointer-events: none;
+    }
+    #orbCanvas { width: 300px; height: 300px; }
+    .eq-bars { display: flex; gap: 5px; margin-top: 6px; align-items: flex-end; height: 24px; }
+    .eq-bars span { width: 5px; height: 7px; background: var(--gold); opacity: 0.85; transition: height 0.05s; }
+    .orb-status {
+      margin-top: 10px; font-size: 12px; letter-spacing: 3px;
+      color: var(--gold); text-shadow: 0 0 8px rgba(245, 166, 35, 0.6);
+    }
+
+    /* Chat Area */
+    .chat-section { display: flex; flex-direction: column; height: 210px; gap: 8px; }
+    .chat-head {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border); padding-bottom: 6px;
+    }
+    .chat-box {
+      flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 6px;
+    }
+    .msg-wrap { display: flex; flex-direction: column; max-width: 78%; }
+    .msg-wrap.user { align-self: flex-end; align-items: flex-end; }
+    .msg-wrap.assistant { align-self: flex-start; align-items: flex-start; }
+    .msg-tag { font-size: 10px; color: var(--cyan-dim); letter-spacing: 1px; margin-bottom: 3px; }
+    .bubble { padding: 8px 14px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+    .user .bubble { background: #0c4d7a; border: 1px solid var(--cyan); color: #fff; }
+    .assistant .bubble { background: #071b2e; border: 1px solid var(--border); color: var(--text); }
+
+    /* Input Bar */
+    .input-bar { display: flex; gap: 8px; align-items: center; }
+    .mic-btn {
+      width: 42px; height: 42px; background: transparent; border: 1px solid var(--gold);
+      color: var(--gold); font-size: 18px; cursor: pointer;
+    }
+    .mic-btn.active { background: var(--gold); color: #000; }
+    .text-in {
+      flex: 1; height: 42px; background: #04101d; border: 1px solid var(--border);
+      color: #fff; padding: 0 14px; font-size: 13px; outline: none;
+    }
+    .text-in:focus { border-color: var(--cyan); }
+    .send-btn {
+      width: 42px; height: 42px; background: var(--cyan); border: none;
+      color: #001524; font-size: 18px; font-weight: bold; cursor: pointer;
+    }
+    .send-btn:hover { background: #4cc2ff; }
+    @media (max-width: 768px) {
+      body { padding: 8px; height: 100dvh; }
+      .grid { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      #orbCanvas { width: 220px; height: 220px; }
+      .chat-section { height: 42vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand-wrap">
+      <div class="logo-box">K</div>
+      <div>
+        <div class="brand-title">K U T T Y</div>
+        <div class="brand-sub">Personal AI assistant · Tamil · English</div>
+      </div>
+    </div>
+    <div class="status-wrap">
+      <div>
+        <div class="clock" id="clock">--:-- --</div>
+        <div class="date-str" id="dateStr">Loading...</div>
+      </div>
+      <div class="online-pill"><span class="dot"></span> ONLINE</div>
+      <button class="icon-btn" onclick="clearChat()" title="Clear Chat">☀</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- Left HUD Sidebar -->
+    <div class="sidebar">
+      <div class="card">
+        <div class="card-title">WEATHER →</div>
+        <div class="card-sub" id="wCity">Tiruvallur · live data</div>
+        <div class="temp"><span id="wTemp">--</span><span>°C</span></div>
+        <div class="w-desc" id="wDesc">Loading...</div>
+        <div class="bar-row">
+          <div class="bar-head"><span>Humidity</span><span id="wHum">0%</span></div>
+          <div class="bar-track"><div class="bar-fill" id="wHumBar" style="width:0%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-head"><span>Rain chance</span><span id="wRain">0%</span></div>
+          <div class="bar-track"><div class="bar-fill" id="wRainBar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">NEWS →</div>
+        <div class="card-sub">Tamil Nadu · last 3 days</div>
+        <div id="newsList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">NOTES & REMINDERS →</div>
+        <div class="card-sub">Saved on this computer</div>
+        <div id="notesList"></div>
+      </div>
+    </div>
+
+    <!-- Right Workspace -->
+    <div class="workspace">
+      <div class="orb-panel">
+        <div class="scan-line"></div>
+        <canvas id="orbCanvas" width="300" height="300"></canvas>
+        <div class="eq-bars">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="orb-status" id="orbStatus">STANDBY</div>
+      </div>
+
+      <div class="chat-section">
+        <div class="chat-head">
+          <span class="card-title">CHAT →</span>
+          <span class="card-sub" style="margin:0">Tamil · English</span>
+        </div>
+        <div class="chat-box" id="chatBox"></div>
+        <div class="input-bar">
+          <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Toggle Auto-Mic">🎤</button>
+          <input class="text-in" id="prompt" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMsg()" />
+          <button class="send-btn" onclick="sendMsg()">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById("chatBox");
+    const promptInput = document.getElementById("prompt");
+    const orbStatus = document.getElementById("orbStatus");
+    const micBtn = document.getElementById("micBtn");
+    const eqBars = document.querySelectorAll(".eq-bars span");
+
+    // 1. Live Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("clock").textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById("dateStr").textContent = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 2. Dense 3D Particle Sphere (Gold in Standby -> Glowing Red + Sound Vibration when Speaking)
+    const canvas = document.getElementById("orbCanvas");
+    const ctx = canvas.getContext("2d");
+    const pts = [];
+    for (let lat = -84; lat <= 84; lat += 7) {
+      const ringStep = Math.abs(lat) > 65 ? 18 : 10;
+      for (let lon = 0; lon < 360; lon += ringStep) {
+        const phi = (lat * Math.PI) / 180;
+        const theta = (lon * Math.PI) / 180;
+        pts.push({
+          x: Math.cos(phi) * Math.cos(theta),
+          y: Math.sin(phi),
+          z: Math.cos(phi) * Math.sin(theta),
+          phase: (lat + lon) * 0.05
+        });
+      }
+    }
+
+    let angle = 0, orbSpeed = 0.008;
+    let isSpeaking = false;
+    let audioCtx = null, analyser = null, freqData = null;
+
+    function drawOrb() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+
+      let energy = 0;
+      if (isSpeaking && analyser && freqData) {
+        analyser.getByteFrequencyData(freqData);
+        let sum = 0;
+        for (let i = 0; i < 32; i++) sum += freqData[i];
+        energy = (sum / 32) / 255;
+
+        eqBars.forEach((bar, idx) => {
+          const val = freqData[idx * 3] || 0;
+          bar.style.height = Math.max(6, (val / 255) * 24) + "px";
+          bar.style.background = "#ff2a2a";
+        });
+      } else {
+        eqBars.forEach(bar => {
+          bar.style.height = "7px";
+          bar.style.background = "#f5a623";
+        });
+      }
+
+      const baseR = 95 + (isSpeaking ? energy * 38 : 0);
+      angle += orbSpeed + (isSpeaking ? energy * 0.04 : 0);
+
+      pts.forEach((p) => {
+        const rx = p.x * Math.cos(angle) - p.z * Math.sin(angle);
+        const rz = p.x * Math.sin(angle) + p.z * Math.cos(angle);
+        const scale = (rz + 1.8) / 2.8;
+
+        const vib = isSpeaking ? Math.sin(angle * 8 + p.phase) * energy * 10 : 0;
+        const r = baseR + vib;
+
+        const px = cx + rx * r;
+        const py = cy + p.y * r;
+        const alpha = Math.max(0.15, scale * 0.95);
+        const dotSize = Math.max(0.9, scale * (isSpeaking ? 2.1 + energy : 1.6));
+
+        if (isSpeaking) {
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "rgba(255, 35, 35, 0.9)";
+          ctx.fillStyle = `rgba(255, 45, 45, ${alpha})`;
+        } else {
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgba(245, 166, 35, ${alpha})`;
+        }
+
+        ctx.beginPath();
+        ctx.arc(px, py, dotSize, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      requestAnimationFrame(drawOrb);
+    }
+    drawOrb();
+
+    // 3. Load Live Weather, News & Notes
+    fetch("/dashboard").then(r => r.json()).then(d => {
+      document.getElementById("wCity").textContent = `${d.weather.city} · live data`;
+      document.getElementById("wTemp").textContent = d.weather.temp;
+      document.getElementById("wDesc").textContent = d.weather.desc;
+      document.getElementById("wHum").textContent = d.weather.humidity + "%";
+      document.getElementById("wHumBar").style.width = d.weather.humidity + "%";
+      document.getElementById("wRain").textContent = d.weather.rain + "%";
+      document.getElementById("wRainBar").style.width = d.weather.rain + "%";
+
+      document.getElementById("newsList").innerHTML = d.news.map(n =>
+        `<div class="list-item"><div class="list-top"><span>${n.title}</span><span class="list-date">${n.date}</span></div><div class="list-line"></div></div>`
+      ).join("");
+      document.getElementById("notesList").innerHTML = d.notes.map(n =>
+        `<div class="list-item"><div class="list-top"><span>${n.text}</span><span class="list-date">${n.time}</span></div><div class="list-line"></div></div>`
+      ).join("");
+    });
+
+    // 4. Chat + Audio-Reactive Voice Playback
+    function addBubble(role, text) {
+      const wrap = document.createElement("div");
+      wrap.className = "msg-wrap " + role;
+      wrap.innerHTML = `<div class="msg-tag">${role === "user" ? "VIKI" : "KUTTY"}</div><div class="bubble"></div>`;
+      wrap.querySelector(".bubble").textContent = text;
+      chatBox.appendChild(wrap);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return wrap.querySelector(".bubble");
+    }
+
+    async function speakText(text) {
+      if (!text.trim()) return;
+      try {
+        const res = await fetch("/speak", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
+        const blob = await res.blob();
+        const audio = new Audio(URL.createObjectURL(blob));
+
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+        const src = audioCtx.createMediaElementSource(audio);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 128;
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+        src.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        isSpeaking = true;
+        orbStatus.textContent = "SPEAKING...";
+        orbStatus.style.color = "#ff3b3b";
+
+        await new Promise(resolve => {
+          audio.onended = resolve;
+          audio.onerror = resolve;
+          audio.play().catch(resolve);
+        });
+      } catch (e) {
+        console.error(e);
+      } finally {
+        isSpeaking = false;
+        orbStatus.style.color = "#f5a623";
+        orbStatus.textContent = autoMic ? "LISTENING..." : "STANDBY";
+        orbSpeed = autoMic ? 0.02 : 0.008;
+        if (autoMic) startListening();
+      }
+    }
+
+    async function sendMsg() {
+      const text = promptInput.value.trim();
+      if (!text) return;
+      promptInput.value = "";
+      stopListening();
+      addBubble("user", text);
+
+      orbStatus.textContent = "THINKING...";
+      orbSpeed = 0.025;
+      const bubble = addBubble("assistant", "");
+
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullReply = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullReply += decoder.decode(value, { stream: true });
+        bubble.textContent = fullReply;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+      await speakText(fullReply);
+    }
+
+    async function clearChat() {
+      await fetch("/clear", { method: "POST" });
+      chatBox.innerHTML = "";
+    }
+
+    // 5. Continuous Auto-Mic (Click 🎤 once to keep hands-free ON)
+    let autoMic = false;
+    let recognition = null;
+
+    function startListening() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return alert("Use Chrome or Edge for voice input.");
+      if (recognition) { try { recognition.stop(); } catch(e){} }
+
+      recognition = new SR();
+      recognition.lang = "en-IN";
+      recognition.interimResults = false;
+      orbStatus.textContent = "LISTENING...";
+      orbSpeed = 0.02;
+
+      recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript.trim();
+        if (transcript) {
+          promptInput.value = transcript;
+          sendMsg();
+        }
+      };
+      recognition.onend = () => {
+        if (autoMic && !isSpeaking) {
+          setTimeout(startListening, 300);
+        }
+      };
+      try { recognition.start(); } catch(e){}
+    }
+
+    function stopListening() {
+      if (recognition) {
+        recognition.onend = null;
+        try { recognition.stop(); } catch(e){}
+      }
+    }
+
+    async function toggleMic() {
+      const res = await fetch("/toggle_mic", { method: "POST" });
+      const data = await res.json();
+      micBtn.classList.toggle("active", data.listening);
+      orbStatus.textContent = data.listening ? "STANDBY" : "MUTED";
+      orbSpeed = data.listening ? 0.008 : 0.002;
+    }
+
+    fetch("/history").then(r => r.json()).then(d => d.messages.forEach(m => addBubble(m.role, m.content)));
+// 6. Auto-receive "Hey Kutty" commands & sync mic status
+setInterval(async () => {
+      if (isSpeaking) return;
+      try {
+        const r = await fetch("/voice_command");
+        const d = await r.json();
+        micBtn.classList.toggle("active", d.listening);
+        if (!d.command) {
+          orbStatus.textContent = d.listening ? "STANDBY" : "SLEEPING";
+          orbSpeed = d.listening ? 0.008 : 0.002;
+        } else {
+          promptInput.value = d.command;
+          sendMsg();
+        }
+      } catch (e) {}
+    }, 500);
+ </script>
+</body>
+</html>
