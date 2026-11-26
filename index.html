@@ -402,11 +402,15 @@
       if (!text) return;
       const low = text.toLowerCase();
 if (low.includes("youtube") || low.startsWith("play ")) {
-  const q = low.replace(/open|youtube|and|play|song|songs|in|on/g, "").trim();
-  const url = q
-    ? `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`
-    : "https://www.youtube.com";
-  window.open(url, "_blank");
+  const q = low.replace(/open|youtube|and|play|song|songs|first|one|in|on/g, "").trim();
+  if (q) {
+    fetch(`/yt_first?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(d => { window.location.href = d.url; });
+  } else {
+    window.location.href = "https://www.youtube.com";
+  }
+}
 } else if (low.includes("open whatsapp")) {
   window.open("https://wa.me/", "_blank");
 } else if (low.includes("open maps") || low.includes("google maps")) {
