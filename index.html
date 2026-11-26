@@ -400,6 +400,20 @@
     async function sendMsg() {
       const text = promptInput.value.trim();
       if (!text) return;
+      const low = text.toLowerCase();
+if (low.includes("youtube") || low.startsWith("play ")) {
+  const q = low.replace(/open|youtube|and|play|song|songs|in|on/g, "").trim();
+  const url = q
+    ? `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`
+    : "https://www.youtube.com";
+  window.open(url, "_blank");
+} else if (low.includes("open whatsapp")) {
+  window.open("https://wa.me/", "_blank");
+} else if (low.includes("open maps") || low.includes("google maps")) {
+  window.open("https://maps.google.com", "_blank");
+} else if (low.includes("open google")) {
+  window.open("https://www.google.com", "_blank");
+}
       promptInput.value = "";
       stopListening();
       addBubble("user", text);
