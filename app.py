@@ -109,8 +109,8 @@ async def transcribe_audio(file: UploadFile = File(...)):
     audio_bytes = await file.read()
     tr = client.audio.transcriptions.create(
         file=("voice.webm", audio_bytes),
-        model="whisper-large-v3-turbo",
-        language="ta"
+        model="whisper-large-v3",
+        prompt="Hey Kutty, Viki, open YouTube, play song, Ilayaraja, Tiruvallur weather, Tamil, Tanglish."
     )
     return {"text": tr.text.strip()}
 
