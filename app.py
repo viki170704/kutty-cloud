@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 import edge_tts
+from fastapi import FastAPI, UploadFile, File
 
 try:
     from ddgs import DDGS
@@ -37,7 +38,7 @@ def fetch_weather():
                 "current": "temperature_2m,relative_humidity_2m,weather_code",
                 "daily": "precipitation_probability_max",
                 "timezone": "auto", "forecast_days": 1
-            }, timeout=8
+            }, timeout=5
         ).json()
         codes = {0: "Clear sky", 1: "Mostly clear", 2: "Partly cloudy", 3: "Cloudy",
                  45: "Fog", 51: "Light drizzle", 61: "Light rain", 63: "Rain",
@@ -49,6 +50,19 @@ def fetch_weather():
             "desc": codes.get(c["weather_code"], "Clear"),
             "humidity": c["relative_humidity_2m"],
             "rain": d["precipitation_probability_max"][0],
+        }
+    except Exception:
+        pass
+
+    try:
+        r = requests.get("https://wttr.in/Tiruvallur?format=j1", timeout=6).json()
+        cur = r["current_condition"][0]
+        return {
+            "city": "Tiruvallur",
+            "temp": cur["temp_C"],
+            "desc": cur["weatherDesc"][0]["value"],
+            "humidity": cur["humidity"],
+            "rain": r["weather"][0]["hourly"][0].get("chanceofrain", 0),
         }
     except Exception:
         return {"city": "Tiruvallur", "temp": "--", "desc": "Offline", "humidity": 0, "rain": 0}
