@@ -142,6 +142,18 @@
       #orbCanvas { width: 220px; height: 220px; }
       .chat-section { height: 42vh; }
     }
+    @media (max-width: 768px) {
+      body { padding: 8px 8px 52px 8px; height: 100dvh; }
+      header { flex-wrap: nowrap; gap: 6px; padding: 8px 10px; }
+      .brand-title, header h1 { font-size: 16px !important; letter-spacing: 3px !important; white-space: nowrap; }
+      .brand-sub, header p { font-size: 10px !important; line-height: 1.2; }
+      .clock, #clock { font-size: 15px !important; white-space: nowrap; }
+      #date { font-size: 10px !important; }
+     .grid { grid-template-columns: 1fr; }
+     .sidebar { display: none; }
+     #orbCanvas { width: 200px; height: 200px; }
+      .chat-section { height: 42vh; }
+   }
   </style>
 </head>
 <body>
@@ -456,15 +468,43 @@
       }
     }
 
-    async function toggleMic() {
-      const res = await fetch("/toggle_mic", { method: "POST" });
-      const data = await res.json();
-      micBtn.classList.toggle("active", data.listening);
-      orbStatus.textContent = data.listening ? "STANDBY" : "MUTED";
-      orbSpeed = data.listening ? 0.008 : 0.002;
-    }
+let mediaRecorder = null;
+let audioChunks = [];
 
-    fetch("/history").then(r => r.json()).then(d => d.messages.forEach(m => addBubble(m.role, m.content)));
+async function toggleMic() {
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+    micBtn.classList.remove("active");
+    orbStatus.textContent = "THINKING...";
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const fd = new FormData();
+      fd.append("file", blob, "voice.webm");
+      const r = await fetch("/transcribe", { method: "POST", body: fd });
+      const d = await r.json();
+      if (d.text) {
+        promptInput.value = d.text;
+        sendMsg();
+      } else {
+        orbStatus.textContent = "STANDBY";
+      }
+    };
+    mediaRecorder.start();
+    micBtn.classList.add("active");
+    orbStatus.textContent = "LISTENING...";
+    orbSpeed = 0.025;
+  } catch (e) {
+    alert("Mic permission denied. Enable Microphone in Android App Settings.");
+  }
+}
 // 6. Auto-receive "Hey Kutty" commands & sync mic status
 setInterval(async () => {
       if (isSpeaking) return;
