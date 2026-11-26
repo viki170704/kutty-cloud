@@ -104,6 +104,15 @@ async def speak_audio(req: ChatRequest):
             if chunk["type"] == "audio":
                 yield chunk["data"]
     return StreamingResponse(audio_stream(), media_type="audio/mpeg")
+@app.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)):
+    audio_bytes = await file.read()
+    tr = client.audio.transcriptions.create(
+        file=("voice.webm", audio_bytes),
+        model="whisper-large-v3-turbo",
+        language="ta"
+    )
+    return {"text": tr.text.strip()}
 
 @app.post("/chat")
 def chat(req: ChatRequest):
