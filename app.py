@@ -113,7 +113,25 @@ async def transcribe_audio(file: UploadFile = File(...)):
         prompt="Hey Kutty, Viki, open YouTube, play song, Ilayaraja, Tiruvallur weather, Tamil, Tanglish."
     )
     return {"text": tr.text.strip()}
-
+@app.get("/yt_first")
+def yt_first(q: str):
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Cookie": "CONSENT=YES+cb"
+        }
+        r = requests.get(
+            "https://www.youtube.com/results",
+            params={"search_query": q},
+            headers=headers,
+            timeout=6
+        )
+        m = re.search(r'"videoId":"([a-zA-Z0-9_-]{11})"', r.text)
+        if m:
+            return {"url": f"https://www.youtube.com/watch?v={m.group(1)}"}
+    except Exception:
+        pass
+    return {"url": f"https://www.youtube.com/results?search_query={requests.utils.quote(q)}"}
 @app.post("/chat")
 def chat(req: ChatRequest):
     user_msg = req.message.strip()
